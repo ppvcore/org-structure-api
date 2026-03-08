@@ -81,12 +81,13 @@ func (h *DepartmentHandler) UpdateDepartment(w http.ResponseWriter, r *http.Requ
 	}
 	input.ID = uint(id)
 
-	if err := h.svc.Update(r.Context(), &input); err != nil {
+	updated, err := h.svc.Update(r.Context(), &input)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	json.NewEncoder(w).Encode(input)
+	json.NewEncoder(w).Encode(updated)
 }
 
 func (h *DepartmentHandler) DeleteDepartment(w http.ResponseWriter, r *http.Request) {

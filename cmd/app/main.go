@@ -2,38 +2,28 @@ package main
 
 import (
 	"log"
+
 	cfg "org-structure-api/internal/config"
-	depRepo "org-structure-api/internal/core/department/repository"
-	depSvc "org-structure-api/internal/core/department/service"
-	empRepo "org-structure-api/internal/core/employee/repository"
-	empSvc "org-structure-api/internal/core/employee/service"
 	db "org-structure-api/internal/database"
-	srv "org-structure-api/internal/server"
 )
 
 func main() {
-	/* if err := logger.InitZap(); err != nil {
-		log.Fatalf("cannot initialize logger: %v", err)
-	}
-	defer logger.Close()
-	zapLogs := logger.Logger */
-
 	cfg, err := cfg.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load config")
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	pg, err := db.NewPostgresClient(cfg.Postgres)
 	if err != nil {
-		log.Fatal("Failed to connect to Postgres")
+		log.Fatalf("failed to connect to postgres: %v", err)
 	}
 
-	empRepo := empRepo.NewEmployeeRepoGorm(pg)
-	empSvc := empSvc.NewEmployeeSvc(empRepo)
+	srv, err := container(cfg.Server, pg)
+	if err != nil {
+		log.Fatalf("failed to build container: %v", err)
+	}
 
-	depRepo := depRepo.NewDepartmentRepoGorm(pg)
-	depSvc := depSvc.NewDepartmentSvc(depRepo, empSvc)
-
-	srv := srv.NewServer(cfg.Server, depSvc, empSvc)
-	srv.Start()
+	if err := srv.Start(); err != nil {
+		log.Fatalf("server stopped with error: %v", err)
+	}
 }

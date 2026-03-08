@@ -12,8 +12,12 @@ type DepartmentRepoGorm struct {
 	db *gorm.DB
 }
 
-func NewDepartmentRepoGorm(db *gorm.DB) *DepartmentRepoGorm {
-	return &DepartmentRepoGorm{db: db}
+func NewDepartmentRepoGorm(db *gorm.DB) (*DepartmentRepoGorm, error) {
+	if db == nil {
+		return nil, errors.New("nil gorm DB")
+	}
+
+	return &DepartmentRepoGorm{db: db}, nil
 }
 
 func (r *DepartmentRepoGorm) Create(ctx context.Context, dep *model.Department) error {
@@ -22,15 +26,17 @@ func (r *DepartmentRepoGorm) Create(ctx context.Context, dep *model.Department) 
 
 func (r *DepartmentRepoGorm) GetByID(ctx context.Context, id uint) (*model.Department, error) {
 	var dep model.Department
-	err := r.db.WithContext(ctx).First(&dep, id).Error
+	err := r.db.WithContext(ctx).Select("id", "name", "parent_id", "created_at").First(&dep, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	return &dep, err
 }
-
 func (r *DepartmentRepoGorm) Update(ctx context.Context, dep *model.Department) error {
-	return r.db.WithContext(ctx).Save(dep).Error
+	return r.db.WithContext(ctx).
+		Select("name", "parent_id").
+		Where("id = ?", dep.ID).
+		Updates(dep).Error
 }
 
 func (r *DepartmentRepoGorm) Delete(ctx context.Context, id uint) error {

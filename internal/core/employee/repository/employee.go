@@ -12,21 +12,16 @@ type EmployeeRepoGorm struct {
 	db *gorm.DB
 }
 
-func NewEmployeeRepoGorm(db *gorm.DB) *EmployeeRepoGorm {
-	return &EmployeeRepoGorm{db: db}
+func NewEmployeeRepoGorm(db *gorm.DB) (*EmployeeRepoGorm, error) {
+	if db == nil {
+		return nil, errors.New("nil gorm DB")
+	}
+
+	return &EmployeeRepoGorm{db: db}, nil
 }
 
 func (r *EmployeeRepoGorm) Create(ctx context.Context, emp *model.Employee) error {
 	return r.db.WithContext(ctx).Create(emp).Error
-}
-
-func (r *EmployeeRepoGorm) GetByID(ctx context.Context, id uint) (*model.Employee, error) {
-	var emp model.Employee
-	err := r.db.WithContext(ctx).First(&emp, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	return &emp, err
 }
 
 func (r *EmployeeRepoGorm) ListByDepartmentID(ctx context.Context, departmentID uint) ([]*model.Employee, error) {
@@ -36,14 +31,6 @@ func (r *EmployeeRepoGorm) ListByDepartmentID(ctx context.Context, departmentID 
 		Order("created_at DESC").
 		Find(&employees).Error
 	return employees, err
-}
-
-func (r *EmployeeRepoGorm) Update(ctx context.Context, emp *model.Employee) error {
-	return r.db.WithContext(ctx).Save(emp).Error
-}
-
-func (r *EmployeeRepoGorm) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&model.Employee{}, id).Error
 }
 
 func (r *EmployeeRepoGorm) UpdateDepartmentIDForAll(ctx context.Context, oldDepID, newDepID uint) error {

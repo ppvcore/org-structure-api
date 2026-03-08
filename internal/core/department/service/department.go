@@ -15,15 +15,23 @@ type DepartmentSvc struct {
 	empSvc empSvc.Interface
 }
 
-func NewDepartmentSvc(repo depRepo.Interface, empSvc empSvc.Interface) *DepartmentSvc {
+func NewDepartmentSvc(repo depRepo.Interface, empSvc empSvc.Interface) (*DepartmentSvc, error) {
+	if repo == nil {
+		return nil, errors.New("nil department repository")
+	}
+
+	if empSvc == nil {
+		return nil, errors.New("nil employee service")
+	}
+
 	return &DepartmentSvc{
 		repo:   repo,
 		empSvc: empSvc,
-	}
+	}, nil
 }
 
 func (s *DepartmentSvc) Create(ctx context.Context, dep *model.Department) error {
-	dep.Name = trim(dep.Name)
+	dep.Name = strings.TrimSpace(dep.Name)
 	if dep.Name == "" || len(dep.Name) > 200 {
 		return errors.New("invalid department name")
 	}
@@ -74,25 +82,25 @@ func (s *DepartmentSvc) GetByID(ctx context.Context, id uint, depth int, include
 	return full, nil
 }
 
-func (s *DepartmentSvc) Update(ctx context.Context, dep *model.Department) error {
+func (s *DepartmentSvc) Update(ctx context.Context, dep *model.Department) (*depDtoResp.Department, error) {
 	existing, err := s.repo.GetByID(ctx, dep.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if existing == nil {
-		return errors.New("department not found")
+		return nil, errors.New("department not found")
 	}
 
 	if dep.Name != "" {
-		dep.Name = trim(dep.Name)
+		dep.Name = strings.TrimSpace(dep.Name)
 		if dep.Name == "" || len(dep.Name) > 200 {
-			return errors.New("invalid department name")
+			return nil, errors.New("invalid department name")
 		}
 
 		children, _ := s.repo.ListByParentID(ctx, existing.ParentID)
 		for _, c := range children {
 			if c.ID != dep.ID && c.Name == dep.Name {
-				return errors.New("department name must be unique within parent")
+				return nil, errors.New("department name must be unique within parent")
 			}
 		}
 	}
@@ -100,20 +108,24 @@ func (s *DepartmentSvc) Update(ctx context.Context, dep *model.Department) error
 	newParentID := dep.ParentID
 	if newParentID != nil {
 		if *newParentID == dep.ID {
-			return errors.New("cannot set department as its own parent")
+			return nil, errors.New("cannot set department as its own parent")
 		}
 
 		if s.wouldCreateCycle(ctx, dep.ID, *newParentID) {
-			return errors.New("would create cycle in department tree")
+			return nil, errors.New("would create cycle in department tree")
 		}
 
 		parent, _ := s.repo.GetByID(ctx, *newParentID)
 		if parent == nil {
-			return errors.New("parent department not found")
+			return nil, errors.New("parent department not found")
 		}
 	}
 
-	return s.repo.Update(ctx, dep)
+	if err := s.repo.Update(ctx, dep); err != nil {
+		return nil, err
+	}
+
+	return s.GetByID(ctx, dep.ID, 0, false)
 }
 
 func (s *DepartmentSvc) wouldCreateCycle(ctx context.Context, depID, newParentID uint) bool {
@@ -180,8 +192,4 @@ func (s *DepartmentSvc) deleteCascade(ctx context.Context, id uint) error {
 	}
 	_ = s.empSvc.DeleteByDepartmentID(ctx, id)
 	return s.repo.Delete(ctx, id)
-}
-
-func trim(s string) string {
-	return strings.TrimSpace(s)
 }

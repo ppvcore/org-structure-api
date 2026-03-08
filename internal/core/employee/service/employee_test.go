@@ -2,7 +2,6 @@ package empSvc_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"org-structure-api/internal/core/employee/model"
@@ -30,10 +29,6 @@ func (r *fakeEmpRepo) Create(_ context.Context, emp *model.Employee) error {
 	return nil
 }
 
-func (r *fakeEmpRepo) GetByID(_ context.Context, id uint) (*model.Employee, error) {
-	return r.data[id], nil
-}
-
 func (r *fakeEmpRepo) ListByDepartmentID(_ context.Context, deptID uint) ([]*model.Employee, error) {
 	var list []*model.Employee
 	for _, eid := range r.byDept[deptID] {
@@ -42,20 +37,6 @@ func (r *fakeEmpRepo) ListByDepartmentID(_ context.Context, deptID uint) ([]*mod
 		}
 	}
 	return list, nil
-}
-
-func (r *fakeEmpRepo) Update(_ context.Context, emp *model.Employee) error {
-	if _, exists := r.data[emp.ID]; !exists {
-		return errors.New("employee not found")
-	}
-	r.data[emp.ID] = emp
-
-	return nil
-}
-
-func (r *fakeEmpRepo) Delete(_ context.Context, id uint) error {
-	delete(r.data, id)
-	return nil
 }
 
 func (r *fakeEmpRepo) UpdateDepartmentIDForAll(_ context.Context, oldDepID, newDepID uint) error {
@@ -86,7 +67,7 @@ func TestEmployeeSvc_Create_InvalidFullName(t *testing.T) {
 		data:   make(map[uint]*model.Employee),
 		byDept: make(map[uint][]uint),
 	}
-	svc := empSvc.NewEmployeeSvc(repo)
+	svc, _ := empSvc.NewEmployeeSvc(repo)
 
 	emp := &model.Employee{
 		FullName:     "   ",
@@ -104,7 +85,7 @@ func TestEmployeeSvc_Create_InvalidPosition(t *testing.T) {
 		data:   make(map[uint]*model.Employee),
 		byDept: make(map[uint][]uint),
 	}
-	svc := empSvc.NewEmployeeSvc(repo)
+	svc, _ := empSvc.NewEmployeeSvc(repo)
 
 	emp := &model.Employee{
 		FullName:     "John Doe",
@@ -122,7 +103,7 @@ func TestEmployeeSvc_Create_Success(t *testing.T) {
 		data:   make(map[uint]*model.Employee),
 		byDept: make(map[uint][]uint),
 	}
-	svc := empSvc.NewEmployeeSvc(repo)
+	svc, _ := empSvc.NewEmployeeSvc(repo)
 
 	emp := &model.Employee{
 		FullName:     "Anna Smith",
@@ -134,9 +115,10 @@ func TestEmployeeSvc_Create_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotZero(t, emp.ID)
 
-	saved, _ := repo.GetByID(context.Background(), emp.ID)
-	assert.Equal(t, "Anna Smith", saved.FullName)
-	assert.Equal(t, "QA Engineer", saved.Position)
+	list, _ := repo.ListByDepartmentID(context.Background(), 5)
+	assert.Len(t, list, 1)
+	assert.Equal(t, "Anna Smith", list[0].FullName)
+	assert.Equal(t, "QA Engineer", list[0].Position)
 }
 
 func TestEmployeeSvc_ReassignToDepartment(t *testing.T) {
@@ -144,7 +126,7 @@ func TestEmployeeSvc_ReassignToDepartment(t *testing.T) {
 		data:   make(map[uint]*model.Employee),
 		byDept: make(map[uint][]uint),
 	}
-	svc := empSvc.NewEmployeeSvc(repo)
+	svc, _ := empSvc.NewEmployeeSvc(repo)
 
 	repo.Create(context.Background(), &model.Employee{ID: 1, FullName: "A", Position: "x", DepartmentID: 10})
 	repo.Create(context.Background(), &model.Employee{ID: 2, FullName: "B", Position: "y", DepartmentID: 10})
@@ -164,7 +146,7 @@ func TestEmployeeSvc_DeleteByDepartmentID(t *testing.T) {
 		data:   make(map[uint]*model.Employee),
 		byDept: make(map[uint][]uint),
 	}
-	svc := empSvc.NewEmployeeSvc(repo)
+	svc, _ := empSvc.NewEmployeeSvc(repo)
 
 	repo.Create(context.Background(), &model.Employee{ID: 10, FullName: "X", Position: "Dev", DepartmentID: 7})
 	repo.Create(context.Background(), &model.Employee{ID: 11, FullName: "Y", Position: "PM", DepartmentID: 7})
@@ -174,7 +156,4 @@ func TestEmployeeSvc_DeleteByDepartmentID(t *testing.T) {
 
 	list, _ := repo.ListByDepartmentID(context.Background(), 7)
 	assert.Empty(t, list)
-
-	_, err = repo.GetByID(context.Background(), 10)
-	assert.Nil(t, err)
 }

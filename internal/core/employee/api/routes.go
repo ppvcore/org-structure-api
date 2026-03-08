@@ -7,6 +7,5 @@ import (
 )
 
 func SetupEmployeeRoutes(r *mux.Router, h *EmployeeHandler) {
-	r.HandleFunc("/departments/{id:[0-9]+}/employees", h.CreateEmployee).
-		Methods(http.MethodPost)
+	r.HandleFunc("/departments/{id:[0-9]+}/employees", h.CreateEmployee).Methods(http.MethodPost)
 }

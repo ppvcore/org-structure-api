@@ -7,6 +7,7 @@ import (
 
 	"org-structure-api/internal/core/department/model"
 	depSvc "org-structure-api/internal/core/department/service"
+	empModel "org-structure-api/internal/core/employee/model"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -50,15 +51,38 @@ func (r *fakeRepo) Delete(_ context.Context, id uint) error {
 	delete(r.data, id)
 	return nil
 }
+
 func ptr[T any](v T) *T { return &v }
+
+// Заглушка для Employee service
+type fakeEmpSvc struct{}
+
+func (f *fakeEmpSvc) Create(ctx context.Context, emp *empModel.Employee) error {
+	return nil
+}
+
+func (f *fakeEmpSvc) ListByDepartmentID(ctx context.Context, depID uint) ([]*empModel.Employee, error) {
+	return []*empModel.Employee{}, nil
+}
+
+func (f *fakeEmpSvc) ReassignToDepartment(ctx context.Context, fromID, toID uint) error {
+	return nil
+}
+
+func (f *fakeEmpSvc) DeleteByDepartmentID(ctx context.Context, depID uint) error {
+	return nil
+}
 
 func TestDepartmentSvc_Create_InvalidName(t *testing.T) {
 	repo := &fakeRepo{data: make(map[uint]*model.Department)}
-	svc := depSvc.NewDepartmentSvc(repo, nil)
+	empSvc := &fakeEmpSvc{}
+
+	svc, err := depSvc.NewDepartmentSvc(repo, empSvc)
+	assert.NoError(t, err) // проверяем, что сервис создался
 
 	dep := &model.Department{Name: "  "}
 
-	err := svc.Create(context.Background(), dep)
+	err = svc.Create(context.Background(), dep)
 	assert.Error(t, err)
 	assert.Equal(t, "invalid department name", err.Error())
 }
@@ -66,15 +90,18 @@ func TestDepartmentSvc_Create_InvalidName(t *testing.T) {
 func TestDepartmentSvc_Create_DuplicateName(t *testing.T) {
 	repo := &fakeRepo{data: make(map[uint]*model.Department)}
 
+	// существующие департаменты
 	repo.data[1] = &model.Department{ID: 1, Name: "Development", ParentID: nil}
-
 	repo.data[10] = &model.Department{ID: 10, Name: "Backend", ParentID: ptr(uint(1))}
 
-	svc := depSvc.NewDepartmentSvc(repo, nil)
+	empSvc := &fakeEmpSvc{}
+
+	svc, err := depSvc.NewDepartmentSvc(repo, empSvc)
+	assert.NoError(t, err)
 
 	dep := &model.Department{Name: "Backend", ParentID: ptr(uint(1))}
 
-	err := svc.Create(context.Background(), dep)
+	err = svc.Create(context.Background(), dep)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unique in parent")
 }
@@ -83,11 +110,14 @@ func TestDepartmentSvc_Update_SelfParent(t *testing.T) {
 	repo := &fakeRepo{data: make(map[uint]*model.Department)}
 	repo.data[5] = &model.Department{ID: 5}
 
-	svc := depSvc.NewDepartmentSvc(repo, nil)
+	empSvc := &fakeEmpSvc{}
+
+	svc, err := depSvc.NewDepartmentSvc(repo, empSvc)
+	assert.NoError(t, err)
 
 	dep := &model.Department{ID: 5, ParentID: ptr(uint(5))}
 
-	err := svc.Update(context.Background(), dep)
+	_, err = svc.Update(context.Background(), dep)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "own parent")
 }

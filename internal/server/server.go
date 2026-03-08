@@ -2,6 +2,7 @@ package srv
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	cfg "org-structure-api/internal/config"
@@ -19,7 +20,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(cfg cfg.ServerConfig, depSvc depSvc.Interface, empSvc empSvc.Interface) *Server {
+func NewServer(cfg cfg.ServerConfig, depSvc depSvc.Interface, empSvc empSvc.Interface) (*Server, error) {
 	r := mux.NewRouter()
 
 	depHand, empHand := api.SetupAllHandlers(depSvc, empSvc)
@@ -34,29 +35,39 @@ func NewServer(cfg cfg.ServerConfig, depSvc depSvc.Interface, empSvc empSvc.Inte
 		},
 	}
 
-	return s
+	return s, nil
 }
 
-func (s *Server) Start() {
+func (s *Server) Start() error {
+	errCh := make(chan error, 1)
+
 	go func() {
 		log.Printf("Server running on %s\n", s.httpServer.Addr)
-		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen failed: %v", err)
+
+		if err := s.httpServer.ListenAndServe(); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
-	<-quit
-	s.Shutdown()
+
+	select {
+	case <-quit:
+		return s.Shutdown()
+	case err := <-errCh:
+		return err
+	}
 }
 
-func (s *Server) Shutdown() {
-	log.Println("Shutting down server...")
+func (s *Server) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		return err
 	}
-	log.Println("Server exited gracefully")
+
+	return nil
 }
