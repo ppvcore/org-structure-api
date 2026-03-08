@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	empDtoReq "org-structure-api/internal/core/employee/dto/request"
 	"org-structure-api/internal/core/employee/model"
 	empSvc "org-structure-api/internal/core/employee/service"
 
@@ -21,26 +22,27 @@ func NewEmployeeHandler(svc empSvc.Interface) *EmployeeHandler {
 
 func (h *EmployeeHandler) CreateEmployee(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	depIDStr, ok := vars["id"]
-	if !ok {
-		http.Error(w, "department id is required", http.StatusBadRequest)
-		return
-	}
-	depID, err := strconv.ParseUint(depIDStr, 10, 64)
+	idStr := vars["id"]
+	deptID, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "invalid department id", http.StatusBadRequest)
 		return
 	}
 
-	var emp model.Employee
-	if err := json.NewDecoder(r.Body).Decode(&emp); err != nil {
+	var req empDtoReq.CreateEmployee
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	emp.DepartmentID = uint(depID)
+	emp := &model.Employee{
+		DepartmentID: uint(deptID),
+		FullName:     req.FullName,
+		Position:     req.Position,
+		HiredAt:      req.HiredAt,
+	}
 
-	if err := h.svc.Create(r.Context(), &emp); err != nil {
+	if err := h.svc.Create(r.Context(), emp); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

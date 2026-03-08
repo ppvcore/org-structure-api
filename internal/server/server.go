@@ -22,8 +22,8 @@ type Server struct {
 func NewServer(cfg cfg.ServerConfig, depSvc depSvc.Interface, empSvc empSvc.Interface) *Server {
 	r := mux.NewRouter()
 
-	depHand, empHand := api.SetupHandlers(depSvc, empSvc)
-	api.SetupRoutes(r, depHand, empHand)
+	depHand, empHand := api.SetupAllHandlers(depSvc, empSvc)
+	api.SetupAllRoutes(r, depHand, empHand)
 
 	s := &Server{
 		httpServer: &http.Server{

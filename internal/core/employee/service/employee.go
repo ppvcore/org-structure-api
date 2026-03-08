@@ -42,7 +42,7 @@ func (s *EmployeeSvc) GetByID(ctx context.Context, id uint) (*model.Employee, er
 	return emp, nil
 }
 
-func (s *EmployeeSvc) ListByDepartment(ctx context.Context, departmentID uint) ([]*model.Employee, error) {
+func (s *EmployeeSvc) ListByDepartmentID(ctx context.Context, departmentID uint) ([]*model.Employee, error) {
 	return s.repo.ListByDepartmentID(ctx, departmentID)
 }
 
@@ -64,4 +64,12 @@ func (s *EmployeeSvc) Update(ctx context.Context, emp *model.Employee) error {
 
 func (s *EmployeeSvc) Delete(ctx context.Context, id uint) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *EmployeeSvc) ReassignToDepartment(ctx context.Context, oldDepID, newDepID uint) error {
+	return s.repo.UpdateDepartmentIDForAll(ctx, oldDepID, newDepID)
+}
+
+func (s *EmployeeSvc) DeleteByDepartmentID(ctx context.Context, depID uint) error {
+	return s.repo.DeleteByDepartmentID(ctx, depID)
 }

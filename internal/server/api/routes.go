@@ -1,3 +1,4 @@
+// internal/server/api/routes.go (общий)
 package api
 
 import (
@@ -7,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func SetupRoutes(r *mux.Router, depHandler *depApi.DepartmentHandler, empHandler *empApi.EmployeeHandler) {
-	depApi.SetupDepartmentRoutes(r, depHandler)
-	empApi.SetupEmployeeRoutes(r, empHandler)
+func SetupAllRoutes(r *mux.Router, depHand *depApi.DepartmentHandler, empHand *empApi.EmployeeHandler) {
+	depApi.SetupDepartmentRoutes(r, depHand)
+	empApi.SetupEmployeeRoutes(r, empHand)
 }

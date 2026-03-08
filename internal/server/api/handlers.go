@@ -7,7 +7,7 @@ import (
 	empSvc "org-structure-api/internal/core/employee/service"
 )
 
-func SetupHandlers(depSvc depSvc.Interface, empSvc empSvc.Interface) (depHand *depApi.DepartmentHandler, empHand *empApi.EmployeeHandler) {
+func SetupAllHandlers(depSvc depSvc.Interface, empSvc empSvc.Interface) (depHand *depApi.DepartmentHandler, empHand *empApi.EmployeeHandler) {
 	depHand = depApi.NewDepartmentHandler(depSvc)
 	empHand = empApi.NewEmployeeHandler(empSvc)
 	return

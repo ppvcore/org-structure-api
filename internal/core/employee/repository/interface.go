@@ -11,4 +11,6 @@ type Interface interface {
 	ListByDepartmentID(ctx context.Context, departmentID uint) ([]*model.Employee, error)
 	Update(ctx context.Context, emp *model.Employee) error
 	Delete(ctx context.Context, id uint) error
+	UpdateDepartmentIDForAll(ctx context.Context, oldDepID uint, newDepID uint) error
+	DeleteByDepartmentID(ctx context.Context, depID uint) error
 }
